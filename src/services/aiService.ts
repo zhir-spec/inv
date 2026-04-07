@@ -80,7 +80,7 @@ export async function generateMarketingContent(affiliateName: string, referralLi
       }
     } catch (imageError) {
       console.error("Image Generation Error:", imageError);
-      result.imageUrl = `https://picsum.photos/seed/trading/1280/720`;
+      result.imageUrl = `https://static.vecteezy.com/system/resources/previews/041/043/373/large_2x/ai-generated-rear-view-of-a-male-trader-sitting-in-front-of-the-monitor-with-stock-market-data-free-photo.jpg`;
     }
 
     return result;
@@ -90,7 +90,7 @@ export async function generateMarketingContent(affiliateName: string, referralLi
       instagram: [`Start your trading journey! ${referralLink}`],
       tiktok: [{ title: "Trading Life", script: "Link in bio!" }],
       ads: ["Join the Elite"],
-      imageUrl: `https://picsum.photos/seed/trading/1280/720`
+      imageUrl: `https://static.vecteezy.com/system/resources/previews/041/043/373/large_2x/ai-generated-rear-view-of-a-male-trader-sitting-in-front-of-the-monitor-with-stock-market-data-free-photo.jpg`
     };
   }
 }
