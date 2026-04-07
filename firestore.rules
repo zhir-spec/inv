@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - email: string (required) - User email address
+    //   - displayName: string (optional) - User display name
+    //   - photoURL: string (optional) - User profile picture URL
+    //   - referralCode: string (required, immutable) - Unique affiliate referral code
+    //   - role: string (required) - ['affiliate', 'admin']
+    //   - level: string (optional) - ['Bronze', 'Silver', 'Gold']
+    //   - totalClicks: number (optional) - Total clicks
+    //   - totalSignups: number (optional) - Total signups
+    //   - totalConversions: number (optional) - Total conversions
+    //   - earnings: number (optional) - Total earnings
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: clicks
+    // Document ID: {clickId}
+    // Fields:
+    //   - affiliateId: string (required) - UID of the affiliate
+    //   - referralCode: string (required) - Referral code used
+    //   - timestamp: timestamp (required)
+    //   - userAgent: string (optional)
+    //
+    // Collection: referrals
+    // Document ID: {referralId}
+    // Fields:
+    //   - affiliateId: string (required) - UID of the affiliate
+    //   - referredUserId: string (required) - UID of the referred user
+    //   - status: string (required) - ['signup', 'conversion']
+    //   - timestamp: timestamp (required)
+    //   - value: number (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "zhir.investmentspot@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'referralCode', 'role']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.referralCode is string && data.referralCode.size() >= 4 && data.referralCode.size() <= 20 &&
+             data.role in ['affiliate', 'admin'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Allow reading profiles for leaderboard/referrals
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'affiliate';
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && 
+                    isValidUser(request.resource.data) &&
+                    request.resource.data.role == resource.data.role && // Prevent self-role-escalation
+                    request.resource.data.referralCode == resource.data.referralCode; // Referral code is immutable
+    }
+
+    match /clicks/{clickId} {
+      allow read: if isAdmin();
+      allow create: if true; // Publicly writable for tracking
+      allow update, delete: if isAdmin();
+    }
+
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.affiliateId) || isAdmin());
+      allow create: if isAdmin(); // Only system/admin can create referrals
+      allow update, delete: if isAdmin();
+    }
+  }
+}

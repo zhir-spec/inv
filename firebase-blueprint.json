@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "Affiliate user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User profile picture URL" },
+        "referralCode": { "type": "string", "description": "Unique affiliate referral code" },
+        "role": { "type": "string", "enum": ["affiliate", "admin"], "description": "User role" },
+        "level": { "type": "string", "enum": ["Bronze", "Silver", "Gold"], "description": "Affiliate level" },
+        "totalClicks": { "type": "number", "description": "Total clicks on referral link" },
+        "totalSignups": { "type": "number", "description": "Total signups referred" },
+        "totalConversions": { "type": "number", "description": "Total conversions referred" },
+        "earnings": { "type": "number", "description": "Total earnings in USD" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "referralCode", "role"]
+    },
+    "clicks": {
+      "title": "Click",
+      "description": "Tracking for referral link clicks",
+      "type": "object",
+      "properties": {
+        "affiliateId": { "type": "string", "description": "UID of the affiliate" },
+        "referralCode": { "type": "string", "description": "Referral code used" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the click occurred" },
+        "userAgent": { "type": "string", "description": "Browser user agent" },
+        "ip": { "type": "string", "description": "IP address (anonymized or masked)" }
+      },
+      "required": ["affiliateId", "referralCode", "timestamp"]
+    },
+    "referrals": {
+      "title": "Referral",
+      "description": "Tracking for referred signups",
+      "type": "object",
+      "properties": {
+        "affiliateId": { "type": "string", "description": "UID of the affiliate" },
+        "referredUserId": { "type": "string", "description": "UID of the referred user" },
+        "status": { "type": "string", "enum": ["signup", "conversion"], "description": "Referral status" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the referral occurred" },
+        "value": { "type": "number", "description": "Monetary value of conversion" }
+      },
+      "required": ["affiliateId", "referredUserId", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "users" },
+      "description": "User profiles and affiliate stats"
+    },
+    "/clicks/{clickId}": {
+      "schema": { "$ref": "clicks" },
+      "description": "Referral click tracking logs"
+    },
+    "/referrals/{referralId}": {
+      "schema": { "$ref": "referrals" },
+      "description": "Referral signup and conversion tracking"
+    }
+  }
+}
