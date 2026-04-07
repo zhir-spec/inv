@@ -2,6 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import { generateMarketingContent } from "./server/ai.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,9 +11,22 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // API routes can go here
+  app.use(express.json());
+
+  // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/generate-content", async (req, res) => {
+    const { affiliateName, referralLink } = req.body;
+    try {
+      const result = await generateMarketingContent(affiliateName, referralLink);
+      res.json(result);
+    } catch (error: any) {
+      console.error("API Error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate content" });
+    }
   });
 
   // Vite middleware for development

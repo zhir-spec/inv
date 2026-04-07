@@ -15,9 +15,16 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
     try {
       const result = await generateMarketingContent(profile?.displayName || 'Trader', referralLink);
       setContent(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to generate content. Please try again.");
+      const message = err.message || "";
+      if (message.includes("API key not valid") || message.includes("GEMINI_API_KEY is missing")) {
+        setError("Gemini API key is missing or invalid. Please add it to the Secrets panel in AI Studio.");
+      } else if (message.includes("GROQ_API_KEY is missing")) {
+        setError("Groq API key is missing. Please add it to the Secrets panel in AI Studio.");
+      } else {
+        setError("Failed to generate content. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
