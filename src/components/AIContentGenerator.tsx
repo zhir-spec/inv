@@ -18,12 +18,12 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
     } catch (err: any) {
       console.error(err);
       const message = err.message || "";
-      if (message.includes("API key not valid") || message.includes("GEMINI_API_KEY is missing")) {
-        setError("Gemini API key is missing or invalid. Please add it to the Secrets panel in AI Studio.");
-      } else if (message.includes("GROQ_API_KEY is missing")) {
-        setError("Groq API key is missing. Please add it to the Secrets panel in AI Studio.");
+      if (message.includes("GEMINI_API_KEY") || message.includes("API key not valid")) {
+        setError("Gemini API key is missing or invalid. Please add a valid key to the Secrets panel in AI Studio.");
+      } else if (message.includes("GROQ_API_KEY")) {
+        setError("Groq API key is missing or invalid. Please add a valid key to the Secrets panel in AI Studio.");
       } else {
-        setError("Failed to generate content. Please try again.");
+        setError("Failed to generate content. Please ensure your API keys are set in the Secrets panel.");
       }
     } finally {
       setLoading(false);

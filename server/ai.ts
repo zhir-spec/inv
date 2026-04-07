@@ -37,6 +37,11 @@ export async function generateMarketingContent(affiliateName: string, referralLi
   `;
 
   try {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey || groqKey.trim() === "" || groqKey.includes("TODO")) {
+      throw new Error("GROQ_API_KEY is missing or invalid. Please add a valid API key to the Secrets panel in AI Studio.");
+    }
+
     // Generate Text Content using Groq (Llama 3.1)
     const textResponse = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
@@ -84,11 +89,13 @@ export async function generateMarketingContent(affiliateName: string, referralLi
 
     // Generate Marketing Image using Gemini
     try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY is missing. Please add it to the Secrets panel.");
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey.trim() === "" || apiKey.includes("TODO")) {
+        throw new Error("GEMINI_API_KEY is missing or invalid. Please add a valid API key to the Secrets panel in AI Studio.");
       }
       
-      const imageResponse = await (ai as any).models.generateContent({
+      // The SDK pattern from README: ai.models.generateContent
+      const imageResponse = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
         contents: [{
           role: 'user',
@@ -103,14 +110,23 @@ export async function generateMarketingContent(affiliateName: string, referralLi
         }]
       });
 
-      for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          result.imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      // Based on README: response.text or response.candidates
+      // For images, we need to check the parts
+      const candidates = (imageResponse as any).candidates;
+      if (candidates && candidates[0]?.content?.parts) {
+        for (const part of candidates[0].content.parts) {
+          if (part.inlineData) {
+            result.imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
-    } catch (imageError) {
+    } catch (imageError: any) {
       console.error("Image Generation Error:", imageError);
+      // If it's an API key error, we want to surface it more clearly
+      if (imageError.message?.includes("API key not valid")) {
+        console.error("CRITICAL: The provided GEMINI_API_KEY is invalid.");
+      }
     }
 
     if (!result.imageUrl) {
