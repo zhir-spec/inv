@@ -1,10 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "" });
 
 export async function generateMarketingContent(affiliateName: string, referralLink: string) {
@@ -85,52 +83,6 @@ export async function generateMarketingContent(affiliateName: string, referralLi
       } else {
         throw new Error("Failed to parse Groq response");
       }
-    }
-
-    // Generate Marketing Image using Gemini
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey.trim() === "" || apiKey.includes("TODO")) {
-        throw new Error("GEMINI_API_KEY is missing or invalid. Please add a valid API key to the Secrets panel in AI Studio.");
-      }
-      
-      // The SDK pattern from README: ai.models.generateContent
-      const imageResponse = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: [{
-          role: 'user',
-          parts: [{
-            text: `A professional, cinematic marketing image for a high-end investment broker. 
-                   Subject: A modern, clean trading desk with multiple monitors showing financial charts (candlestick patterns). 
-                   Style: Sleek, dark theme with gold accents. 
-                   Atmosphere: Serious, institutional, high-tech. 
-                   EXCLUDE: People drinking, partying, or irrelevant lifestyle shots. 
-                   Focus on: Professionalism and financial technology.`,
-          }]
-        }]
-      });
-
-      // Based on README: response.text or response.candidates
-      // For images, we need to check the parts
-      const candidates = (imageResponse as any).candidates;
-      if (candidates && candidates[0]?.content?.parts) {
-        for (const part of candidates[0].content.parts) {
-          if (part.inlineData) {
-            result.imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-            break;
-          }
-        }
-      }
-    } catch (imageError: any) {
-      console.error("Image Generation Error:", imageError);
-      // If it's an API key error, we want to surface it more clearly
-      if (imageError.message?.includes("API key not valid")) {
-        console.error("CRITICAL: The provided GEMINI_API_KEY is invalid.");
-      }
-    }
-
-    if (!result.imageUrl) {
-        result.imageUrl = `https://static.vecteezy.com/system/resources/previews/041/043/373/large_2x/ai-generated-rear-view-of-a-male-trader-sitting-in-front-of-the-monitor-with-stock-market-data-free-photo.jpg`;
     }
 
     return result;
