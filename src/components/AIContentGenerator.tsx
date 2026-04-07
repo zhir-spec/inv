@@ -7,14 +7,17 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const result = await generateMarketingContent(profile?.displayName || 'Trader', referralLink);
       setContent(result);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to generate content. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -28,6 +31,13 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
 
   return (
     <div className="space-y-8">
+      {error && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          {error}
+        </div>
+      )}
+
       {!content && !loading && (
         <div className="p-12 rounded-3xl bg-slate-900 border-2 border-dashed border-slate-800 flex flex-col items-center text-center">
           <div className="w-16 h-16 bg-gold-500/10 rounded-2xl flex items-center justify-center mb-6">
@@ -56,7 +66,7 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
               <Sparkles className="w-8 h-8 text-gold-500 animate-pulse" />
             </div>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">AI is thinking...</h3>
+          <h3 className="text-xl font-bold text-white mb-2">{content ? 'Regenerating...' : 'AI is thinking...'}</h3>
           <p className="text-slate-400">Crafting high-converting content for your audience.</p>
         </div>
       )}

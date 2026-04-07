@@ -4,15 +4,24 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function generateMarketingContent(affiliateName: string, referralLink: string) {
   const prompt = `
-    You are a marketing expert for a top-tier Investment Broker. 
-    The broker offers 1:300 leverage and 0.0 pips spreads.
-    Generate marketing content for an affiliate named "${affiliateName}".
-    Their referral link is: ${referralLink}
+    You are a world-class marketing strategist for a premium Investment Broker. 
+    The broker is known for:
+    - 1:300 Leverage
+    - 0.0 Pips Spreads
+    - Fast execution and institutional-grade liquidity
+    - Gold and Black branding (Premium/Elite feel)
+
+    Generate fresh, high-converting marketing content for an affiliate named "${affiliateName}".
+    Their unique referral link is: ${referralLink}
+    
+    IMPORTANT: Provide unique and creative ideas that are different from common templates. Each time this is called, try to explore a different marketing angle (e.g., technical analysis, lifestyle, risk management, or platform features).
 
     Please provide:
-    1. 3 Instagram Captions (engaging, with emojis and hashtags)
-    2. 2 TikTok Video Ideas/Scripts (short, viral style)
-    3. 2 Ad Headlines (punchy, high conversion)
+    1. 3 Instagram Captions: One educational, one FOMO-driven, one lifestyle-success (but professional). Use emojis and relevant hashtags like #Trading #Forex #Investing.
+    2. 2 TikTok Video Scripts: One "Day in the life of a trader" style, one "Why I chose this broker" style. Keep them under 30 seconds.
+    3. 2 Ad Headlines: Short, punchy, and focused on the 0.0 pips or 1:300 leverage.
+
+    CRITICAL: Ensure the content is professional, trustworthy, and avoids "get rich quick" schemes. Focus on the tools and conditions provided by the broker.
 
     Return the response in a structured JSON format like this:
     {
@@ -47,9 +56,12 @@ export async function generateMarketingContent(affiliateName: string, referralLi
         contents: {
           parts: [
             {
-              text: `A high-end, professional marketing image for an investment broker. 
-                     Theme: Luxury, financial success, gold accents, professional trading setup. 
-                     Text overlay (optional): "Trade with the Best", "1:300 Leverage".`,
+              text: `A professional, cinematic marketing image for a high-end investment broker. 
+                     Subject: A modern, clean trading desk with multiple monitors showing financial charts (candlestick patterns). 
+                     Style: Sleek, dark theme with gold accents. 
+                     Atmosphere: Serious, institutional, high-tech. 
+                     EXCLUDE: People drinking, partying, or irrelevant lifestyle shots. 
+                     Focus on: Professionalism and financial technology.`,
             },
           ],
         },
