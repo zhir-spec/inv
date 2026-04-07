@@ -68,28 +68,17 @@ export async function generateMarketingContent(affiliateName: string, referralLi
       }
     } catch (imageError) {
       console.error("Image Generation Error:", imageError);
-      // Fallback placeholder image
       result.imageUrl = `https://picsum.photos/seed/trading/1280/720`;
     }
 
     return result;
   } catch (error) {
     console.error("AI Generation Error:", error);
-    // Fallback content
     return {
-      instagram: [
-        `Start your trading journey with the best! 📈 Use my link: ${referralLink} #Forex #Trading`,
-        `Financial freedom is just a click away. 💸 Join me here: ${referralLink}`,
-        `Master the markets with our expert tools. 🚀 Sign up: ${referralLink}`
-      ],
-      tiktok: [
-        { title: "Day in the life of a trader", script: "Show your setup, then point to the link in bio!" },
-        { title: "Why I chose this broker", script: "List 3 benefits: low spreads, fast withdrawals, great support." }
-      ],
-      ads: [
-        "Trade Forex Like a Pro - Low Spreads!",
-        "Join the Elite Trading Community Today"
-      ]
+      instagram: [`Start your trading journey! ${referralLink}`],
+      tiktok: [{ title: "Trading Life", script: "Link in bio!" }],
+      ads: ["Join the Elite"],
+      imageUrl: `https://picsum.photos/seed/trading/1280/720`
     };
   }
 }
