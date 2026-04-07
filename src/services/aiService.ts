@@ -1,11 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export async function generateMarketingContent(affiliateName: string, referralLink: string) {
-  // @ts-ignore - The SDK types might be slightly different in this environment
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const prompt = `
     You are a marketing expert for a top-tier Investment Broker. 
     The broker offers 1:300 leverage and 0.0 pips spreads.
@@ -26,16 +23,56 @@ export async function generateMarketingContent(affiliateName: string, referralLi
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Generate Text Content
+    const textResponse = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
     
-    // Extract JSON from the response (Gemini sometimes wraps it in markdown)
+    const text = textResponse.text || "";
+    let result: any = {};
+    
+    // Extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      result = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error("Failed to parse AI response");
     }
-    throw new Error("Failed to parse AI response");
+
+    // Generate Marketing Image
+    try {
+      const imageResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [
+            {
+              text: `A high-end, professional marketing image for an investment broker. 
+                     Theme: Luxury, financial success, gold accents, professional trading setup. 
+                     Text overlay (optional): "Trade with the Best", "1:300 Leverage".`,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "16:9",
+          },
+        },
+      });
+
+      for (const part of imageResponse.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          result.imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+    } catch (imageError) {
+      console.error("Image Generation Error:", imageError);
+      // Fallback placeholder image
+      result.imageUrl = `https://picsum.photos/seed/trading/1280/720`;
+    }
+
+    return result;
   } catch (error) {
     console.error("AI Generation Error:", error);
     // Fallback content

@@ -14,9 +14,8 @@ export default function ReferralRedirect() {
         if (affiliateId) {
           // Store affiliate ID in local storage for signup tracking
           localStorage.setItem('referred_by', affiliateId);
-          // Redirect to a landing page or the home page
-          // In a real app, this might go to the broker's signup page
-          navigate('/broker-landing');
+          // Redirect to the actual broker's signup page
+          window.location.href = `https://ib.investment-spot.com/?ref=${code}`;
         } else {
           setError(true);
         }

@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 
 export default function Dashboard({ profile }: { profile: any }) {
   const [copied, setCopied] = useState(false);
-  const referralLink = `${window.location.origin}/ref/${profile?.referralCode}`;
+  const referralLink = `https://ib.investment-spot.com/?ref=${profile?.referralCode}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);

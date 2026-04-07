@@ -66,8 +66,40 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+            className="space-y-8"
           >
+            {/* Image Section */}
+            {content.imageUrl && (
+              <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-gold-500 font-bold">
+                    <Camera className="w-5 h-5" />
+                    AI-Generated Marketing Image
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = content.imageUrl;
+                      link.download = 'marketing-image.png';
+                      link.click();
+                    }}
+                    className="text-xs font-bold text-slate-500 hover:text-white transition-colors"
+                  >
+                    Download Image
+                  </button>
+                </div>
+                <div className="aspect-video rounded-2xl overflow-hidden border border-slate-800 bg-black">
+                  <img 
+                    src={content.imageUrl} 
+                    alt="AI Generated Marketing" 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Instagram Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-gold-400 font-bold px-2">
@@ -128,9 +160,10 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
                 Regenerate New Ideas
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </div>
   );
 }

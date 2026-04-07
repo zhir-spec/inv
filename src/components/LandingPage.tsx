@@ -24,10 +24,15 @@ export default function LandingPage() {
           Join thousands of investors using our institutional-grade platform. Low spreads, lightning-fast execution, and 24/7 expert support.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="px-10 py-5 bg-gold-500 hover:bg-gold-600 text-black rounded-2xl font-black text-lg transition-all shadow-xl shadow-gold-600/30 flex items-center justify-center gap-2 group">
+          <a 
+            href={`https://ib.investment-spot.com/?ref=${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-10 py-5 bg-gold-500 hover:bg-gold-600 text-black rounded-2xl font-black text-lg transition-all shadow-xl shadow-gold-600/30 flex items-center justify-center gap-2 group"
+          >
             Open Free Account
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </a>
           <button className="px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg transition-all border border-slate-800">
             View Live Spreads
           </button>
@@ -86,9 +91,14 @@ export default function LandingPage() {
               Dedicated account manager for every client
             </li>
           </ul>
-          <button className="mt-10 px-8 py-4 bg-white text-slate-950 rounded-xl font-black transition-all hover:bg-slate-100 active:scale-95">
+          <a 
+            href={`https://ib.investment-spot.com/?ref=${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-10 px-8 py-4 bg-white text-slate-950 rounded-xl font-black transition-all hover:bg-slate-100 active:scale-95 inline-block"
+          >
             Get Started Now
-          </button>
+          </a>
         </div>
       </div>
     </div>
