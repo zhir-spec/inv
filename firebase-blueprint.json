@@ -2,23 +2,62 @@
   "entities": {
     "users": {
       "title": "User",
-      "description": "Affiliate user profile",
+      "description": "User profile for super admins, broker admins, and affiliates",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Firebase Auth UID" },
         "email": { "type": "string", "format": "email", "description": "User email address" },
         "displayName": { "type": "string", "description": "User display name" },
         "photoURL": { "type": "string", "description": "User profile picture URL" },
+        "role": { "type": "string", "enum": ["super_admin", "broker_admin", "affiliate"], "description": "User role" },
+        "brokerId": { "type": "string", "description": "ID of the broker this user belongs to (null for super_admin)" },
         "referralCode": { "type": "string", "description": "Unique affiliate referral code" },
-        "role": { "type": "string", "enum": ["affiliate", "admin"], "description": "User role" },
         "level": { "type": "string", "enum": ["Bronze", "Silver", "Gold"], "description": "Affiliate level" },
-        "totalClicks": { "type": "number", "description": "Total clicks on referral link" },
-        "totalSignups": { "type": "number", "description": "Total signups referred" },
-        "totalConversions": { "type": "number", "description": "Total conversions referred" },
-        "earnings": { "type": "number", "description": "Total earnings in USD" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "clicks": { "type": "number" },
+            "signups": { "type": "number" },
+            "conversions": { "type": "number" },
+            "earnings": { "type": "number" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
       },
-      "required": ["uid", "email", "referralCode", "role"]
+      "required": ["uid", "email", "role"]
+    },
+    "brokers": {
+      "title": "Broker",
+      "description": "Broker entity for multi-tenant SaaS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Broker unique ID" },
+        "name": { "type": "string", "description": "Broker name" },
+        "domain": { "type": "string", "description": "Broker subdomain/slug" },
+        "branding": {
+          "type": "object",
+          "properties": {
+            "primaryColor": { "type": "string" },
+            "secondaryColor": { "type": "string" },
+            "accentColor": { "type": "string" },
+            "logoUrl": { "type": "string" },
+            "companyName": { "type": "string" },
+            "heroTitle": { "type": "string" },
+            "heroSubtitle": { "type": "string" }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "totalAffiliates": { "type": "number" },
+            "totalClicks": { "type": "number" },
+            "totalSignups": { "type": "number" },
+            "totalRevenue": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "domain", "branding"]
     },
     "clicks": {
       "title": "Click",
@@ -51,6 +90,10 @@
     "/users/{userId}": {
       "schema": { "$ref": "users" },
       "description": "User profiles and affiliate stats"
+    },
+    "/brokers/{brokerId}": {
+      "schema": { "$ref": "brokers" },
+      "description": "Broker configurations and branding"
     },
     "/clicks/{clickId}": {
       "schema": { "$ref": "clicks" },

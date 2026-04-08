@@ -1,41 +1,52 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Shield, TrendingUp, Zap, CheckCircle2, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
+import { useTenant } from './DynamicPortal';
 
 export default function LandingPage() {
   const { username } = useParams<{ username: string }>();
+  const { broker } = useTenant();
+
+  if (!broker) return null;
 
   return (
     <div className="max-w-5xl mx-auto py-12">
       {/* Hero Section */}
       <div className="text-center mb-20">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="inline-block px-4 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/20 text-gold-400 text-sm font-bold mb-8"
-        >
-          Recommended by {username}
-        </motion.div>
+        {username && (
+          <div 
+            className="inline-block px-4 py-1.5 rounded-full bg-[rgba(var(--primary-rgb),0.1)] border border-[rgba(var(--primary-rgb),0.2)] text-[var(--primary)] text-sm font-bold mb-8"
+          >
+            Recommended by {username}
+          </div>
+        )}
         <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-8 leading-tight">
-          The Future of <span className="text-gold-500">Investing</span> is Here.
+          {broker.branding.heroTitle.split(' ').map((word, i) => (
+            word === 'Investing' || word === 'Trading' ? <span key={i} className="text-[var(--primary)]">{word} </span> : word + ' '
+          ))}
         </h1>
         <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-12">
-          Join thousands of investors using our institutional-grade platform. Low spreads, lightning-fast execution, and 24/7 expert support.
+          {broker.branding.heroSubtitle}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a 
-            href={`https://ib.investment-spot.com/?ref=${username}`}
+            href={`https://ib.investment-spot.com/?ref=${username || 'direct'}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-10 py-5 bg-gold-500 hover:bg-gold-600 text-black rounded-2xl font-black text-lg transition-all shadow-xl shadow-gold-600/30 flex items-center justify-center gap-2 group"
+            className="px-10 py-5 text-black rounded-2xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 group bg-[var(--accent)]"
+            style={{ 
+              boxShadow: `0 10px 15px -3px rgba(var(--primary-rgb),0.3)`
+            }}
           >
             Open Free Account
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </a>
-          <button className="px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg transition-all border border-slate-800">
-            View Live Spreads
-          </button>
+          <Link 
+            to="auth"
+            className="px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg transition-all border border-slate-800 flex items-center justify-center"
+          >
+            Join Affiliate Program
+          </Link>
         </div>
       </div>
 
@@ -95,7 +106,8 @@ export default function LandingPage() {
             href={`https://ib.investment-spot.com/?ref=${username}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-10 px-8 py-4 bg-white text-slate-950 rounded-xl font-black transition-all hover:bg-slate-100 active:scale-95 inline-block"
+            className="mt-10 px-8 py-4 text-slate-950 rounded-xl font-black transition-all hover:opacity-90 active:scale-95 inline-block"
+            style={{ backgroundColor: broker.branding.accentColor }}
           >
             Get Started Now
           </a>

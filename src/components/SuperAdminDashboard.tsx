@@ -1,0 +1,375 @@
+import React, { useState, useEffect } from 'react';
+import { Users, Briefcase, TrendingUp, Plus, Settings, ExternalLink, Shield, Trash2 } from 'lucide-react';
+import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, limit } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Broker } from '../types';
+import { useAuth } from '../App';
+
+export default function SuperAdminDashboard() {
+  const { profile } = useAuth();
+  const [brokers, setBrokers] = useState<Broker[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'brokers' | 'users'>('brokers');
+  const [isAddingBroker, setIsAddingBroker] = useState(false);
+  const [newBroker, setNewBroker] = useState({ name: '', domain: '' });
+
+  useEffect(() => {
+    if (profile?.role !== 'super_admin') return;
+    const fetchData = async () => {
+      try {
+        const bQ = query(collection(db, 'brokers'), orderBy('createdAt', 'desc'));
+        const bSnap = await getDocs(bQ);
+        setBrokers(bSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Broker)));
+
+        const uQ = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(50));
+        const uSnap = await getDocs(uQ);
+        setUsers(uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [profile]);
+
+  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { role: newRole });
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    } catch (error) {
+      console.error('Error updating user role:', error);
+    }
+  };
+
+  const handleAddBroker = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const brokerData = {
+      name: newBroker.name,
+      domain: newBroker.domain.toLowerCase().replace(/\s+/g, '-'),
+      branding: {
+        primaryColor: '#3B82F6',
+        secondaryColor: '#1E293B',
+        accentColor: '#60A5FA',
+        logoUrl: '',
+        companyName: newBroker.name,
+        heroTitle: `Welcome to ${newBroker.name}`,
+        heroSubtitle: 'Join our elite affiliate network and start earning today.'
+      },
+      stats: {
+        totalAffiliates: 0,
+        totalClicks: 0,
+        totalSignups: 0,
+        totalRevenue: 0
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const docRef = await addDoc(collection(db, 'brokers'), brokerData);
+      setBrokers([{ id: docRef.id, ...brokerData } as Broker, ...brokers]);
+      setIsAddingBroker(false);
+      setNewBroker({ name: '', domain: '' });
+    } catch (error) {
+      console.error('Error adding broker:', error);
+    }
+  };
+
+  const handleDeleteBroker = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this broker? This cannot be undone.')) {
+      try {
+        await deleteDoc(doc(db, 'brokers', id));
+        setBrokers(brokers.filter(b => b.id !== id));
+      } catch (error) {
+        console.error('Error deleting broker:', error);
+      }
+    }
+  };
+
+  const totalRevenue = brokers.length > 0 
+    ? brokers.reduce((acc, b) => acc + (b.stats?.totalRevenue || 0), 0)
+    : 145800; // Mock global revenue
+  const totalAffiliates = brokers.length > 0
+    ? brokers.reduce((acc, b) => acc + (b.stats?.totalAffiliates || 0), 0)
+    : 1240; // Mock global affiliates
+  const displayBrokersCount = brokers.length > 0 ? brokers.length : 12; // Mock global brokers
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'super_admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
+        Access Denied. Super Admin only.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="text-blue-500" />
+            Super Admin Control
+          </h1>
+          <p className="text-slate-400">Manage your broker network and global performance.</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setActiveTab('brokers')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${activeTab === 'brokers' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
+          >
+            Brokers
+          </button>
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${activeTab === 'users' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
+          >
+            Users
+          </button>
+          <button 
+            onClick={() => setIsAddingBroker(true)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-semibold transition-all"
+          >
+            <Plus size={20} />
+            Add Broker
+          </button>
+        </div>
+      </div>
+
+      {/* Global Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: 'Total Brokers', value: displayBrokersCount, icon: Briefcase, color: 'blue' },
+          { label: 'Total Affiliates', value: totalAffiliates, icon: Users, color: 'purple' },
+          { label: 'Global Revenue', value: `$${totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'emerald' },
+        ].map((stat, i) => (
+          <div
+            key={stat.label}
+            className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl"
+          >
+            <div className={`w-12 h-12 rounded-xl bg-${stat.color}-500/10 flex items-center justify-center mb-4`}>
+              <stat.icon className={`text-${stat.color}-500`} size={24} />
+            </div>
+            <p className="text-slate-400 text-sm font-medium">{stat.label}</p>
+            <p className="text-2xl font-bold mt-1">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Broker List or User List */}
+      {activeTab === 'brokers' ? (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="p-6 border-bottom border-slate-800 flex items-center justify-between">
+            <h2 className="text-xl font-bold">Active Brokers</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-semibold">Broker Name</th>
+                  <th className="px-6 py-4 font-semibold">Domain</th>
+                  <th className="px-6 py-4 font-semibold">Affiliates</th>
+                  <th className="px-6 py-4 font-semibold">Revenue</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {brokers.length > 0 ? brokers.map((broker) => (
+                  <tr key={broker.id} className="hover:bg-slate-800/30 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold">
+                          {broker.name[0]}
+                        </div>
+                        <span className="font-medium">{broker.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 font-mono text-sm">
+                      {broker.domain}
+                    </td>
+                    <td className="px-6 py-4 font-medium">{broker.stats?.totalAffiliates || 0}</td>
+                    <td className="px-6 py-4 font-medium text-emerald-400">
+                      ${(broker.stats?.totalRevenue || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider">
+                        Active
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a 
+                          href={`/broker/${broker.domain}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                          title="View Portal"
+                        >
+                          <ExternalLink size={18} />
+                        </a>
+                        <button 
+                          onClick={() => handleDeleteBroker(broker.id)}
+                          className="p-2 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500 transition-colors" 
+                          title="Delete Broker"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  // Mock Brokers for Preview
+                  ['Capital One', 'Global FX', 'Prime Traders', 'Elite Markets'].map((name, i) => (
+                    <tr key={i} className="hover:bg-slate-800/30 transition-colors group opacity-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold">
+                            {name[0]}
+                          </div>
+                          <span className="font-medium">{name} (Demo)</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 font-mono text-sm">
+                        {name.toLowerCase().replace(/\s+/g, '-')}
+                      </td>
+                      <td className="px-6 py-4 font-medium">{Math.floor(Math.random() * 500)}</td>
+                      <td className="px-6 py-4 font-medium text-emerald-400">
+                        ${Math.floor(Math.random() * 50000).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">
+                          Preview
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 text-xs">
+                        Locked in Preview
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="p-6 border-bottom border-slate-800 flex items-center justify-between">
+            <h2 className="text-xl font-bold">Platform Users</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-semibold">User</th>
+                  <th className="px-6 py-4 font-semibold">Email</th>
+                  <th className="px-6 py-4 font-semibold">Role</th>
+                  <th className="px-6 py-4 font-semibold">Broker</th>
+                  <th className="px-6 py-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {users.length > 0 ? users.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4 font-medium">{user.displayName}</td>
+                    <td className="px-6 py-4 text-slate-400">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <select 
+                        value={user.role}
+                        onChange={(e) => handleUpdateUserRole(user.id, e.target.value)}
+                        className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="super_admin">Super Admin</option>
+                        <option value="broker_admin">Broker Admin</option>
+                        <option value="affiliate">Affiliate</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 text-sm">
+                      {brokers.find(b => b.id === user.brokerId)?.name || 'None'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {/* Add more user actions if needed */}
+                    </td>
+                  </tr>
+                )) : (
+                  // Mock Users for Preview
+                  ['John Doe', 'Jane Smith', 'Robert Brown'].map((name, i) => (
+                    <tr key={i} className="hover:bg-slate-800/30 transition-colors opacity-50">
+                      <td className="px-6 py-4 font-medium">{name} (Demo)</td>
+                      <td className="px-6 py-4 text-slate-400">{name.toLowerCase().replace(' ', '.')}@example.com</td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                          Affiliate
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 text-sm">None</td>
+                      <td className="px-6 py-4 text-slate-600 text-xs">Locked</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add Broker Modal */}
+      {isAddingBroker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div 
+            className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+          >
+            <h2 className="text-2xl font-bold mb-6">Setup New Broker</h2>
+            <form onSubmit={handleAddBroker} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Broker Name</label>
+                <input 
+                  type="text"
+                  required
+                  value={newBroker.name}
+                  onChange={(e) => setNewBroker({ ...newBroker, name: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  placeholder="e.g. Global Markets"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Subdomain / Slug</label>
+                <input 
+                  type="text"
+                  required
+                  value={newBroker.domain}
+                  onChange={(e) => setNewBroker({ ...newBroker, domain: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  placeholder="e.g. global-markets"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddingBroker(false)}
+                  className="flex-1 px-6 py-3 rounded-xl font-semibold border border-slate-700 hover:bg-slate-800 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all"
+                >
+                  Create Broker
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

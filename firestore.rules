@@ -6,37 +6,16 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - uid: string (required) - Firebase Auth UID
-    //   - email: string (required) - User email address
-    //   - displayName: string (optional) - User display name
-    //   - photoURL: string (optional) - User profile picture URL
-    //   - referralCode: string (required, immutable) - Unique affiliate referral code
-    //   - role: string (required) - ['affiliate', 'admin']
-    //   - level: string (optional) - ['Bronze', 'Silver', 'Gold']
-    //   - totalClicks: number (optional) - Total clicks
-    //   - totalSignups: number (optional) - Total signups
-    //   - totalConversions: number (optional) - Total conversions
-    //   - earnings: number (optional) - Total earnings
-    //   - createdAt: timestamp (required, immutable)
+    // Fields: uid, email, displayName, photoURL, role, brokerId, referralCode, level, stats, createdAt
+    //
+    // Collection: brokers
+    // Fields: id, name, domain, branding, stats, createdAt
     //
     // Collection: clicks
-    // Document ID: {clickId}
-    // Fields:
-    //   - affiliateId: string (required) - UID of the affiliate
-    //   - referralCode: string (required) - Referral code used
-    //   - timestamp: timestamp (required)
-    //   - userAgent: string (optional)
+    // Fields: affiliateId, referralCode, timestamp, userAgent, brokerId
     //
     // Collection: referrals
-    // Document ID: {referralId}
-    // Fields:
-    //   - affiliateId: string (required) - UID of the affiliate
-    //   - referredUserId: string (required) - UID of the referred user
-    //   - status: string (required) - ['signup', 'conversion']
-    //   - timestamp: timestamp (required)
-    //   - value: number (optional)
+    // Fields: affiliateId, referredUserId, status, timestamp, value, brokerId
     //
     // ===============================================================
 
@@ -51,18 +30,32 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
       return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "zhir.investmentspot@gmail.com" && request.auth.token.email_verified == true));
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin') ||
+          (request.auth.token.email == "zhir.investmentspot@gmail.com")
+        );
+    }
+
+    function isBrokerAdmin(brokerId) {
+      return isAuthenticated() && 
+        (getUserData().role == 'broker_admin' && getUserData().brokerId == brokerId) || isSuperAdmin();
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'referralCode', 'role']) &&
-             data.uid is string && data.uid.size() > 0 &&
-             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
-             data.referralCode is string && data.referralCode.size() >= 4 && data.referralCode.size() <= 20 &&
-             data.role in ['affiliate', 'admin'];
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string && data.email is string &&
+             data.role in ['super_admin', 'broker_admin', 'affiliate'];
+    }
+
+    function isValidBroker(data) {
+      return data.keys().hasAll(['id', 'name', 'domain', 'branding']) &&
+             data.id is string && data.name is string && data.domain is string;
     }
 
     // ===============================================================
@@ -70,24 +63,29 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated(); // Allow reading profiles for leaderboard/referrals
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'affiliate';
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && 
+      allow read: if isAuthenticated(); 
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'affiliate' || request.auth.token.email == "zhir.investmentspot@gmail.com");
+      allow update: if isAuthenticated() && (isOwner(userId) || isSuperAdmin()) && 
                     isValidUser(request.resource.data) &&
-                    request.resource.data.role == resource.data.role && // Prevent self-role-escalation
-                    request.resource.data.referralCode == resource.data.referralCode; // Referral code is immutable
+                    (isSuperAdmin() || request.resource.data.role == resource.data.role);
+    }
+
+    match /brokers/{brokerId} {
+      allow read: if true; // Publicly readable for branding
+      allow create, update, delete: if isSuperAdmin();
     }
 
     match /clicks/{clickId} {
-      allow read: if isAdmin();
+      allow read: if isAuthenticated() && (isOwner(resource.data.affiliateId) || isBrokerAdmin(resource.data.brokerId));
       allow create: if true; // Publicly writable for tracking
-      allow update, delete: if isAdmin();
+      allow update, delete: if isSuperAdmin();
     }
 
     match /referrals/{referralId} {
-      allow read: if isAuthenticated() && (isOwner(resource.data.affiliateId) || isAdmin());
-      allow create: if isAdmin(); // Only system/admin can create referrals
-      allow update, delete: if isAdmin();
+      allow read: if isAuthenticated() && (isOwner(resource.data.affiliateId) || isBrokerAdmin(resource.data.brokerId));
+      allow create: if isSuperAdmin() || isBrokerAdmin(request.resource.data.brokerId);
+      allow update, delete: if isSuperAdmin();
     }
   }
 }

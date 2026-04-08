@@ -1,10 +1,10 @@
 {
-  "__comment": "Automatic setup failed. Please manually enter your Firebase Web App config here from the Firebase Console.",
-  "apiKey": "YOUR_API_KEY",
-  "authDomain": "YOUR_AUTH_DOMAIN",
-  "projectId": "YOUR_PROJECT_ID",
-  "storageBucket": "YOUR_STORAGE_BUCKET",
-  "messagingSenderId": "YOUR_MESSAGING_SENDER_ID",
-  "appId": "YOUR_APP_ID",
-  "measurementId": "YOUR_MEASUREMENT_ID"
+  "projectId": "gen-lang-client-0127137681",
+  "appId": "1:13785143662:web:a6943e4f4e99d3b48a497f",
+  "apiKey": "AIzaSyBW4Korw9PVNlFmg137oEyXzs16xNjTg1Y",
+  "authDomain": "gen-lang-client-0127137681.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-d597bc7f-98d9-4cfa-8ab1-329582a39e18",
+  "storageBucket": "gen-lang-client-0127137681.firebasestorage.app",
+  "messagingSenderId": "13785143662",
+  "measurementId": ""
 }

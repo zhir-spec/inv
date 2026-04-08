@@ -31,18 +31,20 @@ export const trackingService = {
       
       const affiliateDoc = querySnapshot.docs[0];
       const affiliateId = affiliateDoc.id;
+      const brokerId = affiliateDoc.data().brokerId;
 
       // Log click
       await addDoc(collection(db, 'clicks'), {
         affiliateId,
         referralCode,
+        brokerId,
         timestamp: serverTimestamp(),
         userAgent: navigator.userAgent
       });
 
       // Increment click count on user profile
       await updateDoc(doc(db, 'users', affiliateId), {
-        totalClicks: increment(1)
+        'stats.clicks': increment(1)
       });
 
       return affiliateId;
@@ -54,15 +56,19 @@ export const trackingService = {
 
   async trackSignup(affiliateId: string, referredUserId: string) {
     try {
+      const affiliateDoc = await getDoc(doc(db, 'users', affiliateId));
+      const brokerId = affiliateDoc.exists() ? affiliateDoc.data().brokerId : null;
+
       await addDoc(collection(db, 'referrals'), {
         affiliateId,
         referredUserId,
+        brokerId,
         status: 'signup',
         timestamp: serverTimestamp()
       });
 
       await updateDoc(doc(db, 'users', affiliateId), {
-        totalSignups: increment(1)
+        'stats.signups': increment(1)
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'referrals');

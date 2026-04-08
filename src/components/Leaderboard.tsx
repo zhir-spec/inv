@@ -1,28 +1,54 @@
 import { useEffect, useState } from 'react';
 import { Trophy, User as UserIcon } from 'lucide-react';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 import { formatCurrency } from '../lib/utils';
-import { motion } from 'motion/react';
-
-const MOCK_LEADERBOARD = [
-  { id: '1', displayName: 'Alex Thompson', totalSignups: 142, earnings: 5420.50, level: 'Gold', photoURL: 'https://picsum.photos/seed/alex/100/100' },
-  { id: '2', displayName: 'Sarah Chen', totalSignups: 98, earnings: 3210.00, level: 'Gold', photoURL: 'https://picsum.photos/seed/sarah/100/100' },
-  { id: '3', displayName: 'Marco Rossi', totalSignups: 76, earnings: 2150.75, level: 'Silver', photoURL: 'https://picsum.photos/seed/marco/100/100' },
-  { id: '4', displayName: 'Elena Gilbert', totalSignups: 54, earnings: 1420.00, level: 'Silver', photoURL: 'https://picsum.photos/seed/elena/100/100' },
-  { id: '5', displayName: 'David Miller', totalSignups: 42, earnings: 980.25, level: 'Bronze', photoURL: 'https://picsum.photos/seed/david/100/100' },
-];
+import { useTenant } from './DynamicPortal';
 
 export default function Leaderboard() {
+  const { broker } = useTenant();
   const [topAffiliates, setTopAffiliates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock loading delay
-    const timer = setTimeout(() => {
-      setTopAffiliates(MOCK_LEADERBOARD);
+    const fetchLeaderboard = async () => {
+      if (!broker?.id) return;
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('brokerId', '==', broker.id),
+          where('role', '==', 'affiliate'),
+          orderBy('stats.earnings', 'desc'),
+          limit(10)
+        );
+        const querySnapshot = await getDocs(q);
+        const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (list.length === 0) {
+          // Use mock data for preview if no real data exists
+          setTopAffiliates([
+            { id: '1', displayName: 'Alex Rivera', level: 'Diamond', stats: { earnings: 12450, signups: 156 }, photoURL: 'https://picsum.photos/seed/alex/100/100' },
+            { id: '2', displayName: 'Sarah Chen', level: 'Platinum', stats: { earnings: 8920, signups: 98 }, photoURL: 'https://picsum.photos/seed/sarah/100/100' },
+            { id: '3', displayName: 'Marcus Thorne', level: 'Gold', stats: { earnings: 5600, signups: 64 }, photoURL: 'https://picsum.photos/seed/marcus/100/100' },
+            { id: '4', displayName: 'Elena Vance', level: 'Silver', stats: { earnings: 3200, signups: 42 }, photoURL: 'https://picsum.photos/seed/elena/100/100' },
+            { id: '5', displayName: 'David Kim', level: 'Bronze', stats: { earnings: 1500, signups: 21 }, photoURL: 'https://picsum.photos/seed/david/100/100' },
+          ]);
+        } else {
+          setTopAffiliates(list);
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        // Fallback to mock data on error
+        setTopAffiliates([
+          { id: '1', displayName: 'Alex Rivera (Demo)', level: 'Diamond', stats: { earnings: 12450, signups: 156 }, photoURL: 'https://picsum.photos/seed/alex/100/100' },
+          { id: '2', displayName: 'Sarah Chen (Demo)', level: 'Platinum', stats: { earnings: 8920, signups: 98 }, photoURL: 'https://picsum.photos/seed/sarah/100/100' },
+        ]);
+      }
       setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    };
+
+    fetchLeaderboard();
+  }, [broker]);
 
   if (loading) {
     return <div className="animate-pulse space-y-4 max-w-4xl mx-auto">
@@ -44,10 +70,7 @@ export default function Leaderboard() {
 
       <div className="space-y-4">
         {topAffiliates.map((affiliate, index) => (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }}
+          <div
             key={affiliate.id}
             className={`p-6 rounded-2xl border flex items-center justify-between transition-all ${
               index === 0 ? 'bg-gold-500/10 border-gold-500/20' : 
@@ -73,7 +96,7 @@ export default function Leaderboard() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gold-500 uppercase tracking-widest">{affiliate.level}</span>
                     <span className="text-slate-600 text-xs">•</span>
-                    <span className="text-xs text-slate-500">{affiliate.totalSignups || 0} Signups</span>
+                    <span className="text-xs text-slate-500">{affiliate.stats?.signups || 0} Signups</span>
                   </div>
                 </div>
               </div>
@@ -81,9 +104,9 @@ export default function Leaderboard() {
 
             <div className="text-right">
               <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Earnings</p>
-              <p className="text-xl font-bold text-white">{formatCurrency(affiliate.earnings || 0)}</p>
+              <p className="text-xl font-bold text-white">{formatCurrency(affiliate.stats?.earnings || 0)}</p>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
