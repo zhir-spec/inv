@@ -87,5 +87,10 @@ service cloud.firestore {
       allow create: if isSuperAdmin() || isBrokerAdmin(request.resource.data.brokerId);
       allow update, delete: if isSuperAdmin();
     }
+
+    match /demo_requests/{requestId} {
+      allow create: if true; // Publicly writable for demo requests
+      allow read, update, delete: if isSuperAdmin();
+    }
   }
 }

@@ -1,20 +1,31 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Zap, TrendingUp, Users, ArrowRight, ChevronRight, CheckCircle2, Globe, BarChart3, X } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function PlatformLanding({ brokers = [] }: { brokers?: any[] }) {
   const navigate = useNavigate();
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isAffiliateModalOpen, setIsAffiliateModalOpen] = useState(false);
   const [demoFormStatus, setDemoFormStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [demoData, setDemoData] = useState({ fullName: '', email: '', brokerageName: '' });
 
-  const handleDemoSubmit = (e: React.FormEvent) => {
+  const handleDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDemoFormStatus('submitting');
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await addDoc(collection(db, 'demo_requests'), {
+        ...demoData,
+        createdAt: new Date().toISOString(),
+        status: 'new'
+      });
       setDemoFormStatus('success');
-    }, 1500);
+    } catch (error) {
+      console.error('Error submitting demo request:', error);
+      setDemoFormStatus('idle');
+      alert('Failed to submit request. Please try again.');
+    }
   };
 
   return (
@@ -156,15 +167,15 @@ export default function PlatformLanding({ brokers = [] }: { brokers?: any[] }) {
                 <form onSubmit={handleDemoSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Full Name</label>
-                    <input type="text" required className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="John Doe" />
+                    <input type="text" required value={demoData.fullName} onChange={(e) => setDemoData({...demoData, fullName: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="John Doe" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Work Email</label>
-                    <input type="email" required className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="john@brokerage.com" />
+                    <input type="email" required value={demoData.email} onChange={(e) => setDemoData({...demoData, email: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="john@brokerage.com" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Brokerage Name</label>
-                    <input type="text" required className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="Global Markets FX" />
+                    <input type="text" required value={demoData.brokerageName} onChange={(e) => setDemoData({...demoData, brokerageName: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors" placeholder="Global Markets FX" />
                   </div>
                   <button 
                     type="submit" 

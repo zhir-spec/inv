@@ -46,7 +46,11 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
       const provider = new GoogleAuthProvider();
       // Ensure provider is configured correctly
       await signInWithPopup(auth, provider);
-      navigate('/');
+      if (broker) {
+        navigate('../dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       console.error("Google Login Error:", err);
       setError(getFriendlyErrorMessage(err.code));
@@ -58,18 +62,16 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
     setError('');
     try {
       if (isRegistering) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
-        setVerificationSent(true);
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        if (!userCredential.user.emailVerified && userCredential.user.email !== 'zhir.investmentspot@gmail.com') {
-          setError('Please verify your email before logging in. Check your inbox for the verification link.');
-          await auth.signOut();
-          return;
-        }
+        await signInWithEmailAndPassword(auth, email, password);
       }
-      if (!isRegistering) navigate('/');
+      
+      if (broker) {
+        navigate('../dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       console.error("Email Auth Error:", err);
       setError(getFriendlyErrorMessage(err.code));

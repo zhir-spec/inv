@@ -9,8 +9,9 @@ export default function SuperAdminDashboard() {
   const { profile } = useAuth();
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [demoRequests, setDemoRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'brokers' | 'users'>('brokers');
+  const [activeTab, setActiveTab] = useState<'brokers' | 'users' | 'demos'>('brokers');
   const [isAddingBroker, setIsAddingBroker] = useState(false);
   const [editingBroker, setEditingBroker] = useState<Broker | null>(null);
   const [newBroker, setNewBroker] = useState({ name: '', domain: '' });
@@ -28,6 +29,10 @@ export default function SuperAdminDashboard() {
         const uQ = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(50));
         const uSnap = await getDocs(uQ);
         setUsers(uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        const dQ = query(collection(db, 'demo_requests'), orderBy('createdAt', 'desc'), limit(50));
+        const dSnap = await getDocs(dQ);
+        setDemoRequests(dSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -136,6 +141,17 @@ export default function SuperAdminDashboard() {
             className={`px-6 py-3 rounded-xl font-semibold transition-all ${activeTab === 'users' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
           >
             Users
+          </button>
+          <button 
+            onClick={() => setActiveTab('demos')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all ${activeTab === 'demos' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
+          >
+            Demo Requests
+            {demoRequests.filter(d => d.status === 'new').length > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {demoRequests.filter(d => d.status === 'new').length}
+              </span>
+            )}
           </button>
           <button 
             onClick={() => setIsAddingBroker(true)}
@@ -283,6 +299,80 @@ export default function SuperAdminDashboard() {
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : activeTab === 'demos' ? (
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="p-6 border-bottom border-slate-800 flex items-center justify-between">
+            <h2 className="text-xl font-bold">Demo Requests</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-semibold">Date</th>
+                  <th className="px-6 py-4 font-semibold">Name</th>
+                  <th className="px-6 py-4 font-semibold">Email</th>
+                  <th className="px-6 py-4 font-semibold">Brokerage</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {demoRequests.length > 0 ? demoRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4 text-slate-400 text-sm">
+                      {new Date(req.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 font-medium">{req.fullName}</td>
+                    <td className="px-6 py-4 text-slate-400">{req.email}</td>
+                    <td className="px-6 py-4 font-medium">{req.brokerageName}</td>
+                    <td className="px-6 py-4">
+                      <select 
+                        value={req.status || 'new'}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value;
+                          try {
+                            await updateDoc(doc(db, 'demo_requests', req.id), { status: newStatus });
+                            setDemoRequests(demoRequests.map(d => d.id === req.id ? { ...d, status: newStatus } : d));
+                          } catch (error) {
+                            console.error('Error updating status:', error);
+                          }
+                        }}
+                        className={`bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-blue-500 ${req.status === 'new' ? 'text-red-400' : req.status === 'contacted' ? 'text-blue-400' : 'text-emerald-400'}`}
+                      >
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="converted">Converted</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm('Delete this request?')) {
+                            try {
+                              await deleteDoc(doc(db, 'demo_requests', req.id));
+                              setDemoRequests(demoRequests.filter(d => d.id !== req.id));
+                            } catch (error) {
+                              console.error('Error deleting request:', error);
+                            }
+                          }
+                        }}
+                        className="p-2 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      No demo requests found.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

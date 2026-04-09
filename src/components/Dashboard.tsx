@@ -26,7 +26,7 @@ export default function Dashboard({ profile }: { profile: any }) {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Welcome back, {profile?.displayName?.split(' ')[0]}!</h1>
+          <h1 className="text-3xl font-bold text-white">Welcome back, {profile?.displayName ? profile.displayName.split(' ')[0] : 'User'}!</h1>
           <p className="text-slate-400">Here's how your affiliate empire is performing today.</p>
         </div>
         <div className="flex items-center gap-3 p-1 bg-slate-900 rounded-xl border border-slate-800">
@@ -61,7 +61,7 @@ export default function Dashboard({ profile }: { profile: any }) {
               {copied ? 'Copied!' : 'Copy Link'}
             </button>
             <a 
-              href={`/${profile?.displayName?.toLowerCase().replace(/\s+/g, '')}`}
+              href={`/${profile?.displayName ? profile.displayName.toLowerCase().replace(/\s+/g, '') : 'user'}`}
               target="_blank"
               className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors border border-slate-700"
             >
