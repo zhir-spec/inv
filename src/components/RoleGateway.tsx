@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Briefcase, Users, ArrowRight, Zap, ChevronRight } from 'lucide-react';
+import { useAuth } from '../App';
 
 export default function RoleGateway({ brokers = [] }: { brokers?: any[] }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+
+  console.log("RoleGateway brokers:", brokers);
+  console.log("RoleGateway user:", user);
+
+  const isAdmin = user?.email === 'zhir.investmentspot@gmail.com';
 
   const roles = [
     {
@@ -15,7 +22,8 @@ export default function RoleGateway({ brokers = [] }: { brokers?: any[] }) {
       icon: Shield,
       color: 'blue',
       path: '/admin',
-      features: ['Broker Onboarding', 'Global Analytics', 'Platform Settings']
+      features: ['Broker Onboarding', 'Global Analytics', 'Platform Settings'],
+      hidden: !isAdmin
     },
     {
       id: 'broker_admin',
@@ -36,6 +44,8 @@ export default function RoleGateway({ brokers = [] }: { brokers?: any[] }) {
       features: ['Promote Broker', 'Earn Commissions', 'AI Marketing Tools']
     }
   ];
+
+  const filteredRoles = roles.filter(r => !r.hidden);
 
   const handleRoleClick = (role: any) => {
     if (role.path) {
@@ -64,7 +74,7 @@ export default function RoleGateway({ brokers = [] }: { brokers?: any[] }) {
 
         {!selectedRole ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {roles.map((role) => (
+            {filteredRoles.map((role) => (
               <div 
                 key={role.id}
                 onClick={() => handleRoleClick(role)}

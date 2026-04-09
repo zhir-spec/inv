@@ -17,12 +17,14 @@ export default function AIContentGenerator({ profile, referralLink }: { profile:
     } catch (err: any) {
       console.error(err);
       const message = err.message || "";
-      if (message.includes("GEMINI_API_KEY") || message.includes("API key not valid")) {
+      if (message.includes("429") || message.includes("quota") || message.includes("limit")) {
+        setError("AI Quota Exceeded. Please try again later or check your API key limits.");
+      } else if (message.includes("GEMINI_API_KEY") || message.includes("API key not valid")) {
         setError("Gemini API key is missing or invalid. Please add a valid key to the Secrets panel in AI Studio.");
       } else if (message.includes("GROQ_API_KEY")) {
         setError("Groq API key is missing or invalid. Please add a valid key to the Secrets panel in AI Studio.");
       } else {
-        setError("Failed to generate content. Please ensure your API keys are set in the Secrets panel.");
+        setError("Failed to generate content. Please ensure your API keys are set correctly.");
       }
     } finally {
       setLoading(false);

@@ -29,23 +29,21 @@ export default function LandingPage() {
           {broker.branding.heroSubtitle}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a 
-            href={`https://ib.investment-spot.com/?ref=${username || 'direct'}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-10 py-5 text-black rounded-2xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 group bg-[var(--accent)]"
+          <Link 
+            to="auth"
+            className="px-10 py-5 bg-[var(--accent)] text-black rounded-2xl font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 group"
             style={{ 
               boxShadow: `0 10px 15px -3px rgba(var(--primary-rgb),0.3)`
             }}
           >
-            Open Free Account
+            Sign Up as Affiliate
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </a>
+          </Link>
           <Link 
             to="auth"
             className="px-10 py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg transition-all border border-slate-800 flex items-center justify-center"
           >
-            Join Affiliate Program
+            Sign In as Affiliate
           </Link>
         </div>
       </div>

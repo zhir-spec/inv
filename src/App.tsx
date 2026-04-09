@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useState, useEffect, createContext, useContext } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, sendEmailVerification } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -63,8 +63,9 @@ import Auth from './components/Auth';
 import ReferralRedirect from './components/ReferralRedirect';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import BrokerAdminDashboard from './components/BrokerAdminDashboard';
+import AllPagesAdmin from './components/AllPagesAdmin';
 import DynamicPortal from './components/DynamicPortal';
-import RoleGateway from './components/RoleGateway';
+import PlatformLanding from './components/PlatformLanding';
 
 interface AuthContextType {
   user: any;
@@ -102,13 +103,20 @@ export default function App() {
 
   useEffect(() => {
     const fetchBrokers = async () => {
-      const bSnap = await getDocs(collection(db, 'brokers'));
-      setBrokers(bSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      try {
+        const bSnap = await getDocs(collection(db, 'brokers'));
+        const brokersData = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log("Fetched brokers:", brokersData);
+        setBrokers(brokersData);
+      } catch (error) {
+        console.error("Error fetching brokers:", error);
+      }
     };
     fetchBrokers();
   }, []);
 
   useEffect(() => {
+    console.log("App profile:", profile);
     // Safety timeout to prevent infinite loading if Firebase hangs
     const timeout = setTimeout(() => {
       if (loading) setLoading(false);
@@ -260,12 +268,35 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, profile, loading, logout }}>
       <Router>
+        {user && !user.emailVerified && user.email !== 'zhir.investmentspot@gmail.com' && (
+          <div className="bg-amber-500 text-black text-center py-2 text-xs font-bold sticky top-0 z-[60]">
+            Please verify your email address to access all features. 
+            <button 
+              onClick={async () => {
+                try {
+                  await sendEmailVerification(auth.currentUser!);
+                  alert('Verification email sent!');
+                } catch (e) {
+                  alert('Failed to send verification email. Please try again later.');
+                }
+              }}
+              className="ml-2 underline"
+            >
+              Resend Email
+            </button>
+          </div>
+        )}
         <Routes>
           {/* Super Admin Routes */}
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={
               profile?.role === 'super_admin' 
                 ? <SuperAdminDashboard /> 
+                : (user ? <Navigate to="/" /> : <Auth onLogin={() => {}} currentUser={user} />)
+            } />
+            <Route path="/admin/all-pages" element={
+              profile?.role === 'super_admin' 
+                ? <AllPagesAdmin /> 
                 : (user ? <Navigate to="/" /> : <Auth onLogin={() => {}} currentUser={user} />)
             } />
             <Route path="/login" element={<Auth onLogin={() => {}} currentUser={user} />} />
@@ -287,7 +318,7 @@ export default function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="/" element={<RoleGateway brokers={brokers} />} />
+          <Route path="/" element={<PlatformLanding brokers={brokers} />} />
         </Routes>
       </Router>
     </AuthContext.Provider>

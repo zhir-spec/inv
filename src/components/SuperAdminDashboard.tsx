@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Briefcase, TrendingUp, Plus, Settings, ExternalLink, Shield, Trash2 } from 'lucide-react';
+import { Users, Briefcase, TrendingUp, Plus, Settings, ExternalLink, Shield, Trash2, Edit2, Save, X } from 'lucide-react';
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Broker } from '../types';
@@ -12,7 +12,10 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'brokers' | 'users'>('brokers');
   const [isAddingBroker, setIsAddingBroker] = useState(false);
+  const [editingBroker, setEditingBroker] = useState<Broker | null>(null);
   const [newBroker, setNewBroker] = useState({ name: '', domain: '' });
+
+  // ... (rest of the component)
 
   useEffect(() => {
     if (profile?.role !== 'super_admin') return;
@@ -176,6 +179,7 @@ export default function SuperAdminDashboard() {
                 <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-semibold">Broker Name</th>
                   <th className="px-6 py-4 font-semibold">Domain</th>
+                  <th className="px-6 py-4 font-semibold">Logo URL</th>
                   <th className="px-6 py-4 font-semibold">Affiliates</th>
                   <th className="px-6 py-4 font-semibold">Revenue</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
@@ -196,6 +200,23 @@ export default function SuperAdminDashboard() {
                     <td className="px-6 py-4 text-slate-400 font-mono text-sm">
                       {broker.domain}
                     </td>
+                    <td className="px-6 py-4">
+                      <input 
+                        type="text"
+                        value={broker.branding?.logoUrl || ''}
+                        onChange={async (e) => {
+                          const newLogoUrl = e.target.value;
+                          try {
+                            await updateDoc(doc(db, 'brokers', broker.id), { 'branding.logoUrl': newLogoUrl });
+                            setBrokers(brokers.map(b => b.id === broker.id ? { ...b, branding: { ...b.branding, logoUrl: newLogoUrl } } : b));
+                          } catch (error) {
+                            console.error('Error updating logo:', error);
+                          }
+                        }}
+                        className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white w-32"
+                        placeholder="Logo URL"
+                      />
+                    </td>
                     <td className="px-6 py-4 font-medium">{broker.stats?.totalAffiliates || 0}</td>
                     <td className="px-6 py-4 font-medium text-emerald-400">
                       ${(broker.stats?.totalRevenue || 0).toLocaleString()}
@@ -206,7 +227,14 @@ export default function SuperAdminDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => setEditingBroker(broker)}
+                          className="p-2 hover:bg-blue-500/10 rounded-lg text-slate-400 hover:text-blue-500 transition-colors"
+                          title="Edit Broker"
+                        >
+                          <Edit2 size={18} />
+                        </button>
                         <a 
                           href={`/broker/${broker.domain}`} 
                           target="_blank" 
@@ -317,6 +345,117 @@ export default function SuperAdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Broker Modal */}
+      {editingBroker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Edit {editingBroker.name}</h2>
+              <button onClick={() => setEditingBroker(null)} className="text-slate-400 hover:text-white"><X /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await updateDoc(doc(db, 'brokers', editingBroker.id), { 
+                  name: editingBroker.name,
+                  domain: editingBroker.domain,
+                  branding: editingBroker.branding,
+                  stats: editingBroker.stats
+                });
+                setBrokers(brokers.map(b => b.id === editingBroker.id ? editingBroker : b));
+                setEditingBroker(null);
+              } catch (error) {
+                console.error('Error updating broker:', error);
+              }
+            }} className="space-y-6">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Broker Name</label>
+                  <input type="text" value={editingBroker.name} onChange={(e) => setEditingBroker({...editingBroker, name: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Domain</label>
+                  <input type="text" value={editingBroker.domain} onChange={(e) => setEditingBroker({...editingBroker, domain: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4">
+                <h3 className="text-lg font-semibold mb-4">Branding & UI</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Company Name</label>
+                    <input type="text" value={editingBroker.branding?.companyName || ''} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, companyName: e.target.value}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Logo URL</label>
+                    <input type="text" value={editingBroker.branding?.logoUrl || ''} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, logoUrl: e.target.value}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Hero Title</label>
+                    <input type="text" value={editingBroker.branding?.heroTitle || ''} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, heroTitle: e.target.value}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Hero Subtitle</label>
+                    <input type="text" value={editingBroker.branding?.heroSubtitle || ''} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, heroSubtitle: e.target.value}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Primary Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={editingBroker.branding?.primaryColor || '#3B82F6'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, primaryColor: e.target.value}} as Broker)} className="h-12 w-12 rounded cursor-pointer bg-slate-800 border border-slate-700" />
+                        <input type="text" value={editingBroker.branding?.primaryColor || '#3B82F6'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, primaryColor: e.target.value}} as Broker)} className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Secondary Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={editingBroker.branding?.secondaryColor || '#1E293B'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, secondaryColor: e.target.value}} as Broker)} className="h-12 w-12 rounded cursor-pointer bg-slate-800 border border-slate-700" />
+                        <input type="text" value={editingBroker.branding?.secondaryColor || '#1E293B'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, secondaryColor: e.target.value}} as Broker)} className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Accent Color</label>
+                      <div className="flex gap-2">
+                        <input type="color" value={editingBroker.branding?.accentColor || '#60A5FA'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, accentColor: e.target.value}} as Broker)} className="h-12 w-12 rounded cursor-pointer bg-slate-800 border border-slate-700" />
+                        <input type="text" value={editingBroker.branding?.accentColor || '#60A5FA'} onChange={(e) => setEditingBroker({...editingBroker, branding: {...editingBroker.branding, accentColor: e.target.value}} as Broker)} className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4">
+                <h3 className="text-lg font-semibold mb-4">Stats Override</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Total Affiliates</label>
+                    <input type="number" value={editingBroker.stats?.totalAffiliates || 0} onChange={(e) => setEditingBroker({...editingBroker, stats: {...editingBroker.stats, totalAffiliates: parseInt(e.target.value) || 0}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Total Clicks</label>
+                    <input type="number" value={editingBroker.stats?.totalClicks || 0} onChange={(e) => setEditingBroker({...editingBroker, stats: {...editingBroker.stats, totalClicks: parseInt(e.target.value) || 0}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Total Signups</label>
+                    <input type="number" value={editingBroker.stats?.totalSignups || 0} onChange={(e) => setEditingBroker({...editingBroker, stats: {...editingBroker.stats, totalSignups: parseInt(e.target.value) || 0}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Total Revenue ($)</label>
+                    <input type="number" value={editingBroker.stats?.totalRevenue || 0} onChange={(e) => setEditingBroker({...editingBroker, stats: {...editingBroker.stats, totalRevenue: parseInt(e.target.value) || 0}} as Broker)} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 mt-6">
+                <Save size={20} /> Save Changes
+              </button>
+            </form>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LogIn, ShieldCheck, TrendingUp, Zap, ArrowRight, Mail, Lock, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, GoogleAuthProvider } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { useTenant } from './DynamicPortal';
 
@@ -15,17 +15,41 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [verificationSent, setVerificationSent] = useState(false);
+
+  const getFriendlyErrorMessage = (errorCode: string) => {
+    switch (errorCode) {
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'auth/user-not-found':
+        return 'No account found with this email.';
+      case 'auth/email-already-in-use':
+        return 'This email is already registered.';
+      case 'auth/weak-password':
+        return 'Password should be at least 6 characters.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/operation-not-allowed':
+        return `Authentication method not enabled. Please check Firebase Console for project: ${auth.app.options.projectId}.`;
+      case 'auth/popup-blocked':
+        return 'Login popup was blocked by your browser. Please allow popups for this site.';
+      case 'auth/cancelled-by-user':
+        return 'Login was cancelled.';
+      default:
+        return 'An unexpected error occurred. Please try again.';
+    }
+  };
 
   const handleGoogleLogin = async () => {
+    setError('');
     try {
-      await signInWithPopup(auth, googleProvider);
+      const provider = new GoogleAuthProvider();
+      // Ensure provider is configured correctly
+      await signInWithPopup(auth, provider);
       navigate('/');
     } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('Google login is not enabled in Firebase Console.');
-      } else {
-        setError(err.message);
-      }
+      console.error("Google Login Error:", err);
+      setError(getFriendlyErrorMessage(err.code));
     }
   };
 
@@ -34,17 +58,21 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
     setError('');
     try {
       if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        setVerificationSent(true);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCredential.user.emailVerified && userCredential.user.email !== 'zhir.investmentspot@gmail.com') {
+          setError('Please verify your email before logging in. Check your inbox for the verification link.');
+          await auth.signOut();
+          return;
+        }
       }
-      navigate('/');
+      if (!isRegistering) navigate('/');
     } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed') {
-        setError(`Email/Password authentication is not enabled in Firebase Console for project: ${auth.app.options.projectId}. Please enable it under Authentication > Sign-in method.`);
-      } else {
-        setError(err.message);
-      }
+      console.error("Email Auth Error:", err);
+      setError(getFriendlyErrorMessage(err.code));
     }
   };
 
@@ -125,7 +153,29 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
           <div className="max-w-md mx-auto bg-slate-900/50 border border-slate-800 p-8 rounded-3xl mb-16">
             <h2 className="text-2xl font-bold mb-6">{isRegistering ? 'Create Account' : 'Welcome Back'}</h2>
             
-            <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
+            {verificationSent ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                  <Mail className="w-8 h-8 text-emerald-500" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Check your email</h3>
+                <p className="text-slate-400 mb-6">
+                  We've sent a verification link to <span className="text-white font-medium">{email}</span>. 
+                  Please verify your account to continue.
+                </p>
+                <button 
+                  onClick={() => {
+                    setVerificationSent(false);
+                    setIsRegistering(false);
+                  }}
+                  className="text-blue-400 font-semibold hover:underline"
+                >
+                  Back to Login
+                </button>
+              </div>
+            ) : (
+              <>
+                <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
                 <input 
@@ -153,7 +203,7 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
               
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 bg-[var(--accent)] text-black"
+                className="w-full py-3 rounded-xl font-bold transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-700"
               >
                 {isRegistering ? 'Register' : 'Login'}
               </button>
@@ -181,7 +231,9 @@ export default function Auth({ currentUser }: { onLogin: (user: any) => void, cu
                 {isRegistering ? 'Login' : 'Register'}
               </button>
             </p>
-          </div>
+          </>
+        )}
+      </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
