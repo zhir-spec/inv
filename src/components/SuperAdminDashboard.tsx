@@ -51,6 +51,16 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleUpdateUserBroker = async (userId: string, newBrokerId: string) => {
+    try {
+      const brokerIdValue = newBrokerId === 'none' ? null : newBrokerId;
+      await updateDoc(doc(db, 'users', userId), { brokerId: brokerIdValue });
+      setUsers(users.map(u => u.id === userId ? { ...u, brokerId: brokerIdValue } : u));
+    } catch (error) {
+      console.error('Error updating user broker:', error);
+    }
+  };
+
   const handleAddBroker = async (e: React.FormEvent) => {
     e.preventDefault();
     const brokerData = {
@@ -410,8 +420,17 @@ export default function SuperAdminDashboard() {
                         <option value="affiliate">Affiliate</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4 text-slate-400 text-sm">
-                      {brokers.find(b => b.id === user.brokerId)?.name || 'None'}
+                    <td className="px-6 py-4">
+                      <select 
+                        value={user.brokerId || 'none'}
+                        onChange={(e) => handleUpdateUserBroker(user.id, e.target.value)}
+                        className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[150px]"
+                      >
+                        <option value="none">None</option>
+                        {brokers.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4">
                       {/* Add more user actions if needed */}

@@ -73,7 +73,8 @@ service cloud.firestore {
 
     match /brokers/{brokerId} {
       allow read: if true; // Publicly readable for branding
-      allow create, update, delete: if isSuperAdmin();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isBrokerAdmin(brokerId);
     }
 
     match /clicks/{clickId} {

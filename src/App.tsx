@@ -66,6 +66,7 @@ import BrokerAdminDashboard from './components/BrokerAdminDashboard';
 import AllPagesAdmin from './components/AllPagesAdmin';
 import DynamicPortal from './components/DynamicPortal';
 import PlatformLanding from './components/PlatformLanding';
+import ProfileSettings from './components/ProfileSettings';
 
 interface AuthContextType {
   user: any;
@@ -299,6 +300,8 @@ export default function App() {
                 ? <AllPagesAdmin /> 
                 : (user ? <Navigate to="/" /> : <Auth onLogin={() => {}} currentUser={user} />)
             } />
+            <Route path="/profile" element={user ? <ProfileSettings /> : <Navigate to="/login" />} />
+            <Route path="/settings" element={user ? <ProfileSettings /> : <Navigate to="/login" />} />
             <Route path="/login" element={<Auth onLogin={() => {}} currentUser={user} />} />
           </Route>
 
@@ -312,6 +315,8 @@ export default function App() {
                 ? <BrokerAdminDashboard /> 
                 : <Navigate to="../auth" />
             } />
+            <Route path="profile" element={user ? <ProfileSettings /> : <Navigate to="../auth" />} />
+            <Route path="settings" element={user ? <ProfileSettings /> : <Navigate to="../auth" />} />
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="ref/:code" element={<ReferralRedirect />} />
             <Route path=":username" element={<LandingPage />} />

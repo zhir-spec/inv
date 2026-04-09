@@ -23,12 +23,13 @@ export default function BrokerAdminDashboard() {
   const { profile } = useAuth();
   const [broker, setBroker] = useState<Broker | null>(null);
   const [branding, setBranding] = useState<Broker['branding'] | null>(null);
+  const [affiliates, setAffiliates] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'branding' | 'affiliates'>('overview');
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBroker = async () => {
+    const fetchBrokerAndAffiliates = async () => {
       if (!brokerDomain) return;
       try {
         const q = query(collection(db, 'brokers'), where('domain', '==', brokerDomain));
@@ -37,7 +38,7 @@ export default function BrokerAdminDashboard() {
           const b = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Broker;
           
           // Authorization check
-          if (profile?.role !== 'super_admin' && profile?.brokerId !== b.id) {
+          if (profile?.role !== 'super_admin' && (profile?.role !== 'broker_admin' || profile?.brokerId !== b.id)) {
             setBroker(null);
             setLoading(false);
             return;
@@ -45,6 +46,11 @@ export default function BrokerAdminDashboard() {
 
           setBroker(b);
           setBranding(b.branding);
+
+          // Fetch affiliates
+          const affQ = query(collection(db, 'users'), where('brokerId', '==', b.id), where('role', '==', 'affiliate'));
+          const affSnap = await getDocs(affQ);
+          setAffiliates(affSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }
       } catch (error) {
         console.error('Error fetching broker:', error);
@@ -52,8 +58,8 @@ export default function BrokerAdminDashboard() {
       setLoading(false);
     };
 
-    fetchBroker();
-  }, [brokerDomain]);
+    fetchBrokerAndAffiliates();
+  }, [brokerDomain, profile]);
 
   const handleSaveBranding = async () => {
     if (broker && branding) {
@@ -296,10 +302,41 @@ export default function BrokerAdminDashboard() {
           <div className="p-6 border-b border-slate-800">
             <h3 className="text-lg font-bold">Your Affiliates</h3>
           </div>
-          <div className="p-12 text-center text-slate-500">
-            <Users size={48} className="mx-auto mb-4 opacity-20" />
-            <p>No affiliates have joined your network yet.</p>
-            <p className="text-sm mt-1">Once they sign up via your portal, they will appear here.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-800/50 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-semibold">Name</th>
+                  <th className="px-6 py-4 font-semibold">Email</th>
+                  <th className="px-6 py-4 font-semibold">Referral Code</th>
+                  <th className="px-6 py-4 font-semibold">Clicks</th>
+                  <th className="px-6 py-4 font-semibold">Signups</th>
+                  <th className="px-6 py-4 font-semibold">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {affiliates.length > 0 ? affiliates.map((aff) => (
+                  <tr key={aff.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4 font-medium">{aff.displayName || 'Unknown'}</td>
+                    <td className="px-6 py-4 text-slate-400">{aff.email}</td>
+                    <td className="px-6 py-4 font-mono text-sm text-blue-400">{aff.referralCode}</td>
+                    <td className="px-6 py-4 font-medium">{aff.stats?.clicks || 0}</td>
+                    <td className="px-6 py-4 font-medium">{aff.stats?.signups || 0}</td>
+                    <td className="px-6 py-4 font-medium text-emerald-400">
+                      ${(aff.stats?.earnings || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      <Users size={48} className="mx-auto mb-4 opacity-20" />
+                      <p>No affiliates have joined your network yet.</p>
+                      <p className="text-sm mt-1">Once they sign up via your portal, they will appear here.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
